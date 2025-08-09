@@ -189,3 +189,21 @@ resource "google_storage_bucket" "sparkml-model-bucket" {
   uniform_bucket_level_access = true
   force_destroy               = var.force_destroy
 }
+resource "google_project_iam_member" "dataplex_bigquery_access" {
+  project = "stardog-poc-467618"
+  role    = "roles/bigquery.dataViewer"
+  member  = "serviceAccount:service-420467067400@gcp-sa-dataplex.iam.gserviceaccount.com"
+}
+
+resource "google_project_iam_member" "dataplex_job_user" {
+  project = "stardog-poc-467618"
+  role    = "roles/bigquery.jobUser"
+  member  = "serviceAccount:service-420467067400@gcp-sa-dataplex.iam.gserviceaccount.com"
+}
+
+resource "google_bigquery_dataset_iam_member" "dataplex_dataset_access" {
+  project    = "stardog-poc-467618"
+  dataset_id = "gcp_primary_staging"
+  role       = "roles/bigquery.dataViewer"
+  member     = "serviceAccount:service-420467067400@gcp-sa-dataplex.iam.gserviceaccount.com"
+}
