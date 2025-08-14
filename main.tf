@@ -63,15 +63,6 @@ resource "random_id" "id" {
 # Set up Storage Buckets
 
 # # Set up the raw storage bucket
-resource "google_storage_bucket" "raw_bucket" {
-  name                        = "gcp-${var.use_case_short}-raw-${random_id.id.hex}"
-  project                     = module.project-services.project_id
-  location                    = var.region
-  uniform_bucket_level_access = true
-  force_destroy               = var.force_destroy
-
-  # public_access_prevention = "enforced" # need to validate if this is a hard requirement
-}
 
 # # Set up the warehouse storage bucket
 resource "google_storage_bucket" "warehouse_bucket" {
@@ -166,13 +157,6 @@ resource "google_storage_bucket" "spark-log-directory" {
   force_destroy               = var.force_destroy
 }
 
-resource "google_storage_bucket" "phs-staging-bucket" {
-  name                        = "gcp-${var.use_case_short}-phs-staging-${random_id.id.hex}"
-  project                     = module.project-services.project_id
-  location                    = var.region
-  uniform_bucket_level_access = true
-  force_destroy               = var.force_destroy
-}
 
 resource "google_storage_bucket" "phs-temp-bucket" {
   name                        = "gcp-${var.use_case_short}-phs-temp-${random_id.id.hex}"
@@ -189,6 +173,7 @@ resource "google_storage_bucket" "sparkml-model-bucket" {
   uniform_bucket_level_access = true
   force_destroy               = var.force_destroy
 }
+
 resource "google_project_iam_member" "dataplex_bigquery_access" {
   project = "stardog-poc-467618"
   role    = "roles/bigquery.dataViewer"
@@ -207,3 +192,85 @@ resource "google_bigquery_dataset_iam_member" "dataplex_dataset_access" {
   role       = "roles/bigquery.dataViewer"
   member     = "serviceAccount:service-420467067400@gcp-sa-dataplex.iam.gserviceaccount.com"
 }
+
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
+data "google_storage_bucket" "raw_bucket" {
+  name = "gcp-lakehouse-raw-0f3468ac"
+}
+
+resource "google_storage_bucket" "raw_bucket" {
+  name          = "gcp-lakehouse-raw-0f3468ac"
+  location      = var.region
+  storage_class = "STANDARD"
+  force_destroy = false
+}
+
+data "google_storage_bucket" "staging_bucket" {
+  name = "gcp-lakehouse-phs-staging-0f3468ac"
+}
+
+resource "google_storage_bucket" "staging_bucket" {
+  name          = "gcp-lakehouse-phs-staging-0f3468ac"
+  location      = var.region
+  storage_class = "STANDARD"
+  force_destroy = false
+}
+
+resource "google_dataplex_zone" "raw_zone" {
+  name     = "gcp-primary-raw"
+  location = var.region
+  lake     = google_dataplex_lake.gcp_primary.name
+  type     = "RAW"
+
+  discovery_spec {
+    enabled          = true
+    include_patterns = ["*.tbl.gz"]
+    exclude_patterns = []
+    csv_options {
+      disable_type_inference = false
+      encoding               = "UTF-8"
+      delimiter              = ","
+      header_rows            = 1
+    }
+  }
+
+  resource_spec {
+    location_type = "SINGLE_REGION"
+  }
+}
+
+resource "google_dataplex_zone" "staging_zone" {
+  name     = "gcp-primary-staging"
+  location = var.region
+  lake     = google_dataplex_lake.gcp_primary.name
+  type     = "CURATED"
+
+  discovery_spec {
+    enabled = true
+  }
+
+  resource_spec {
+    location_type = "SINGLE_REGION"
+  }
+}
+
+resource "google_compute_instance" "default" {
+  name         = "existing-instance"
+  machine_type = "e2-medium"     # Adjust based on existing instance
+  zone         = "us-central1-a" # Adjust based on existing instance
+
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-10" # Adjust based on existing instance
+    }
+  }
+
+  network_interface {
+    network = "default" # Adjust based on existing network
+  }
+}
+

@@ -20,13 +20,13 @@
 # --------------------------------------------------
 
 variable "project_id" {
-  type        = string
   description = "Google Cloud Project ID"
+  type        = string
 }
 
 variable "region" {
-  type        = string
   description = "Google Cloud Region"
+  type        = string
   default     = "us-central1"
 }
 
